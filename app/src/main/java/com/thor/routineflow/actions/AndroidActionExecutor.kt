@@ -335,8 +335,8 @@ class AndroidActionExecutor(
             ?: return ActionResult.Failed("No media session is playing right now")
         return runCatching {
             val playing = session.playbackState?.state == PlaybackState.STATE_PLAYING
-            if (playing) session.controller.transportControls.pause()
-            else session.controller.transportControls.play()
+            if (playing) session.transportControls.pause()
+            else session.transportControls.play()
             ActionResult.Success(if (playing) "Media paused" else "Media playing")
         }.getOrElse { ActionResult.Failed(it.message ?: "Could not control media playback") }
     }

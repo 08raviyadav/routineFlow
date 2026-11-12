@@ -45,7 +45,7 @@
     <string name="action">Action</string>
     <string name="condition">Condition</string>
     <string name="when">When</string>
-    <string name="do">Do</string>
+    <string name="do_label">Do</string>
     <string name="only_if">Only if</string>
     <string name="enabled">Enabled</string>
     <string name="disabled">Disabled</string>

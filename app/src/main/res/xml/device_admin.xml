@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Device admin policies for the "Lock screen" action. ONLY force-lock is
+    requested — deliberately no password policies, no camera disable, and no
+    remote wipe. RoutineFlow uses device admin for one thing only: locking
+    the screen when a routine says so.
+-->
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies>
+        <force-lock />
+    </uses-policies>
+</device-admin>

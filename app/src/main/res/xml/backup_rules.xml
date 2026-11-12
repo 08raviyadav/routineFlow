@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Auto Backup rules (Android 6.0+). RoutineFlow stores only local routine
+    data — routines, modes, run history and preferences — with no account,
+    no credentials and nothing sensitive, so everything is backed up.
+-->
+<full-backup-content xmlns:android="http://schemas.android.com/apk/res/android">
+    <include domain="database" path="." />
+    <include domain="sharedpref" path="." />
+    <include domain="file" path="." />
+    <include domain="external" path="." />
+</full-backup-content>

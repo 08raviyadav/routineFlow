@@ -1,4 +1,4 @@
-# RoutineFlow CI — unit tests + debug APK.
+# RoutineFlow CI — unit tests + debug APK + signed release APK published to GitHub Releases.
 #
 # Kept deliberately to build+test only (no lint job) to reduce failure modes;
 # lint can be added later once the first green build is proven.
@@ -10,6 +10,10 @@ on:
   pull_request:
     branches: ["**"]
   workflow_dispatch:
+
+# The release job creates/updates a GitHub Release — it needs write access.
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -60,3 +64,81 @@ jobs:
           name: routineflow-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
+
+  release:
+    name: Signed release APK to GitHub Release
+    # Only publish from the main branch (never from PRs or feature branches),
+    # and only after the test + debug build passed.
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      GRADLE_OPTS: -Xmx2g -Dorg.gradle.daemon=false
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Ensure Android SDK 36 packages
+        run: |
+          SDKMANAGER="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -n 1)"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;35.0.0" "build-tools;36.0.0"
+
+      - name: Download Gradle 8.13
+        run: |
+          curl -L -o /tmp/gradle-8.13-bin.zip \
+            https://services.gradle.org/distributions/gradle-8.13-bin.zip
+          unzip -q /tmp/gradle-8.13-bin.zip -d /tmp
+          echo "/tmp/gradle-8.13/bin" >> "$GITHUB_PATH"
+
+      # The release keystore is stored base64-encoded in the KEYSTORE_BASE64
+      # repository secret — it never lives in the repo.
+      - name: Decode release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then echo "KEYSTORE_BASE64 secret is not set"; exit 1; fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/routineflow-release.keystore"
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/routineflow-release.keystore" >> "$GITHUB_ENV"
+
+      - name: Build signed release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: gradle :app:assembleRelease --no-daemon --stacktrace
+
+      # Fail loudly if the APK somehow came out unsigned — never publish one.
+      - name: Verify APK signature
+        run: "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: routineflow-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+
+      # Rolling "latest" release: every push to main republishes the APK here,
+      # downloadable without signing in to GitHub.
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: RoutineFlow — latest signed build
+          body: |
+            Latest signed release build of RoutineFlow from the main branch.
+            Download **app-release.apk** below and install it on your Android phone.
+            Signed with the project's release key (SHA-256 `1D:15:8F:7C:70:8D:46:D0:F6:90:73:5C:2D:3B:CE:1F:E7:AD:D7:ED:D0:83:F5:18:FB:37:A5:3C:AB:27:D8:2B`).
+            Built from commit ${{ github.sha }}.
+          files: app/build/outputs/apk/release/app-release.apk
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

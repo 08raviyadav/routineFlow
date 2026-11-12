@@ -1,0 +1,55 @@
+# RoutineFlow CI — unit tests + debug APK.
+#
+# Kept deliberately to build+test only (no lint job) to reduce failure modes;
+# lint can be added later once the first green build is proven.
+name: Build
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Test & build debug APK
+    runs-on: ubuntu-latest
+    env:
+      GRADLE_OPTS: -Xmx2g -Dorg.gradle.daemon=false
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      # Download Gradle directly instead of relying on ./gradlew: the wrapper
+      # jar (gradle/wrapper/gradle-wrapper.jar) may be absent from the repo,
+      # and CI must not fail for that reason.
+      - name: Download Gradle 8.13
+        run: |
+          curl -L -o /tmp/gradle-8.13-bin.zip \
+            https://services.gradle.org/distributions/gradle-8.13-bin.zip
+          unzip -q /tmp/gradle-8.13-bin.zip -d /tmp
+          echo "/tmp/gradle-8.13/bin" >> "$GITHUB_PATH"
+
+      - name: Run unit tests
+        run: gradle :app:testDebugUnitTest --no-daemon --stacktrace
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: routineflow-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30

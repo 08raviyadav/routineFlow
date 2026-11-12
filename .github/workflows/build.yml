@@ -28,12 +28,19 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # The ubuntu-latest runner already ships the Android SDK at $ANDROID_HOME.
+      # (android-actions/setup-android@v3 fails on current runners: it tries to
+      # install the legacy `tools` package, which no longer exists, and
+      # sdkmanager exits 1.) Just make sure the packages this project needs
+      # are present — sdkmanager is a no-op for packages already installed.
+      - name: Ensure Android SDK 36 packages
+        run: |
+          SDKMANAGER="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -n 1)"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;35.0.0" "build-tools;36.0.0"
 
-      # Download Gradle directly instead of relying on ./gradlew: the wrapper
-      # jar (gradle/wrapper/gradle-wrapper.jar) may be absent from the repo,
-      # and CI must not fail for that reason.
+      # Download Gradle directly instead of relying on ./gradlew: web uploads
+      # lose the executable bit on gradlew, and CI must not fail for that reason.
       - name: Download Gradle 8.13
         run: |
           curl -L -o /tmp/gradle-8.13-bin.zip \

@@ -76,7 +76,9 @@ class RoutineFlowNotificationListener : NotificationListenerService() {
         fun isEnabled(context: Context): Boolean {
             val flat = Settings.Secure.getString(
                 context.contentResolver,
-                Settings.Secure.ENABLED_NOTIFICATION_LISTENERS
+                // No public constant exists for this setting key; the support
+                // library reads the same raw key.
+                "enabled_notification_listeners"
             ).orEmpty()
             val component = ComponentName(context, RoutineFlowNotificationListener::class.java)
             return flat.split(":").any { ComponentName.unflattenFromString(it) == component }

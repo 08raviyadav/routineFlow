@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        App theme. No appcompat dependency in this project, so the parent is a
+        framework Material theme; Jetpack Compose Material 3 handles in-app
+        styling on top of it. The theme only sets window-level attributes.
+    -->
+    <style name="Theme.RoutineFlow" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/status_bar</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@color/status_bar</item>
+        <item name="android:windowBackground">@color/background</item>
+    </style>
+</resources>

@@ -98,18 +98,26 @@ jobs:
           unzip -q /tmp/gradle-8.13-bin.zip -d /tmp
           echo "/tmp/gradle-8.13/bin" >> "$GITHUB_PATH"
 
-      # The release keystore is stored base64-encoded in the KEYSTORE_BASE64
-      # repository secret — it never lives in the repo.
-      - name: Decode release keystore
+      # The release keystore is stored ENCRYPTED in the repo
+      # (.github/routineflow-release.keystore.enc, AES-256-CBC, unlocked with
+      # the KEYSTORE_PASSWORD secret). The encrypted file is safe to be public;
+      # only the secret can unlock it. This replaced the base64-in-a-secret
+      # approach: pasting a 3.5KB blob into a secret kept losing a character.
+      - name: Decrypt release keystore
         env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then echo "KEYSTORE_BASE64 secret is not set"; exit 1; fi
-          CLEAN_B64="$(printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]')"
-          echo "keystore base64 length: ${#CLEAN_B64} (expected 3504)"
-          if [ "${#CLEAN_B64}" -ne 3504 ]; then echo "KEYSTORE_BASE64 has the wrong length — the secret was pasted incorrectly"; exit 1; fi
-          printf '%s' "$CLEAN_B64" | base64 --decode > "$RUNNER_TEMP/routineflow-release.keystore"
+          if [ -z "$KEYSTORE_PASSWORD" ]; then echo "KEYSTORE_PASSWORD secret is not set"; exit 1; fi
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -in .github/routineflow-release.keystore.enc \
+            -out "$RUNNER_TEMP/routineflow-release.keystore" \
+            -pass env:KEYSTORE_PASSWORD
           echo "KEYSTORE_PATH=$RUNNER_TEMP/routineflow-release.keystore" >> "$GITHUB_ENV"
+
+      - name: Verify decrypted keystore
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: keytool -list -keystore "$RUNNER_TEMP/routineflow-release.keystore" -storepass "$KEYSTORE_PASSWORD" -alias routineflow
 
       - name: Build signed release APK
         env:

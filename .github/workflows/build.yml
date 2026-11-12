@@ -105,7 +105,10 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
           if [ -z "$KEYSTORE_BASE64" ]; then echo "KEYSTORE_BASE64 secret is not set"; exit 1; fi
-          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/routineflow-release.keystore"
+          CLEAN_B64="$(printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]')"
+          echo "keystore base64 length: ${#CLEAN_B64} (expected 3504)"
+          if [ "${#CLEAN_B64}" -ne 3504 ]; then echo "KEYSTORE_BASE64 has the wrong length — the secret was pasted incorrectly"; exit 1; fi
+          printf '%s' "$CLEAN_B64" | base64 --decode > "$RUNNER_TEMP/routineflow-release.keystore"
           echo "KEYSTORE_PATH=$RUNNER_TEMP/routineflow-release.keystore" >> "$GITHUB_ENV"
 
       - name: Build signed release APK

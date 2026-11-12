@@ -224,7 +224,7 @@ private fun ModeEditorDialog(
                 TriStateChoice(
                     label = "Do Not Disturb",
                     value = settings.dnd,
-                    onChange = { updateSettings { it.copy(dnd = it) } }
+                    onChange = { value -> updateSettings { it.copy(dnd = value) } }
                 )
                 Spacer(Modifier.height(12.dp))
                 DropdownField(
@@ -236,13 +236,13 @@ private fun ModeEditorDialog(
                         "silent" to "Silent"
                     ),
                     selectedValue = settings.ringerMode ?: "",
-                    onValueChange = { updateSettings { it.copy(ringerMode = it.ifBlank { null }) } }
+                    onValueChange = { value -> updateSettings { it.copy(ringerMode = value.ifBlank { null }) } }
                 )
                 Spacer(Modifier.height(12.dp))
                 TriStateChoice(
                     label = "Auto-brightness",
                     value = settings.autoBrightness,
-                    onChange = { updateSettings { it.copy(autoBrightness = it) } }
+                    onChange = { value -> updateSettings { it.copy(autoBrightness = value) } }
                 )
                 Spacer(Modifier.height(12.dp))
                 OptionalSlider(
@@ -293,15 +293,15 @@ private fun ModeEditorDialog(
                         "600000" to "10 minutes"
                     ),
                     selectedValue = settings.screenTimeoutMs?.toString() ?: "",
-                    onValueChange = {
-                        updateSettings { it.copy(screenTimeoutMs = it.toLongOrNull()) }
+                    onValueChange = { value ->
+                        updateSettings { it.copy(screenTimeoutMs = value.toLongOrNull()) }
                     }
                 )
                 Spacer(Modifier.height(12.dp))
                 TriStateChoice(
                     label = "Auto-rotate",
                     value = settings.autoRotate,
-                    onChange = { updateSettings { it.copy(autoRotate = it) } }
+                    onChange = { value -> updateSettings { it.copy(autoRotate = value) } }
                 )
 
                 SectionHeader("Turn on automatically")
